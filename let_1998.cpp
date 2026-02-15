@@ -1,80 +1,68 @@
-#include <bits/stdc++.h>
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+
 using namespace std;
 
-struct Point3D {
-    double x, y, z;
-    int id;
+struct Point {
+    double x{}, y{}, z{};
+    bool operator<(const Point& o) const { return x < o.x; }
 };
 
-static inline double dist2(const Point3D& a, const Point3D& b) {
-    double dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;
-    return dx*dx + dy*dy + dz*dz;
+static inline double Dist(const Point& a, const Point& b) {
+    const double dx = a.x - b.x;
+    const double dy = a.y - b.y;
+    const double dz = a.z - b.z;
+    return sqrt(dx*dx + dy*dy + dz*dz);
 }
 
-struct Answer {
-    double best2;
-    pair<int,int> pairId;
-};
-
-static Answer bruteForce(vector<Point3D>& pts, int l, int r) {
-    Answer ans{numeric_limits<double>::infinity(), {-1,-1}};
-    for (int i = l; i < r; i++) {
-        for (int j = i + 1; j < r; j++) {
-            double d2 = dist2(pts[i], pts[j]);
-            if (d2 < ans.best2) {
-                ans.best2 = d2;
-                ans.pairId = {pts[i].id, pts[j].id};
-            }
+static double BruteForceMin(const vector<Point>& v) {
+    double best = numeric_limits<double>::infinity();
+    for (int i = 0; i < (int)v.size(); ++i) {
+        for (int j = i + 1; j < (int)v.size(); ++j) {
+            best = min(best, Dist(v[i], v[j]));
         }
     }
-    return ans;
+    return best;
 }
 
-static Answer solveDC(vector<Point3D>& pts, int l, int r) {
-    int n = r - l;
-    if (n <= 32) {
-        return bruteForce(pts, l, r);
+static void Solve(const vector<Point>& p, double& best) {
+    if ((int)p.size() < 4) {
+        best = min(best, BruteForceMin(p));
+        return;
     }
 
-    int mid = l + n / 2;
-    double midX = pts[mid].x;
+    const int mid = (int)p.size() / 2;
 
-    Answer leftAns  = solveDC(pts, l, mid);
-    Answer rightAns = solveDC(pts, mid, r);
+    vector<Point> left, right;
+    left.assign(p.begin(), p.begin() + mid);
+    right.assign(p.begin() + mid, p.end());
 
-    Answer ans = (leftAns.best2 < rightAns.best2) ? leftAns : rightAns;
-    double best = sqrt(ans.best2);
+    Solve(left, best);
+    Solve(right, best);
 
-    vector<Point3D> strip;
-    strip.reserve(n);
-    for (int i = l; i < r; i++) {
-        if (fabs(pts[i].x - midX) < best) strip.push_back(pts[i]);
-    }
+    vector<Point> strip;
+    strip.reserve(p.size());
 
-    sort(strip.begin(), strip.end(), [](const Point3D& a, const Point3D& b) {
-        if (a.y != b.y) return a.y < b.y;
-        return a.z < b.z;
-    });
-
-    for (int i = 0; i < (int)strip.size(); i++) {
-        for (int j = i + 1; j < (int)strip.size(); j++) {
-            double dy = strip[j].y - strip[i].y;
-            if (dy >= best) break;
-
-            double dz = fabs(strip[j].z - strip[i].z);
-            if (dz >= best) continue;
-
-
-            double d2 = dist2(strip[i], strip[j]);
-            if (d2 < ans.best2) {
-                ans.best2 = d2;
-                ans.pairId = {strip[i].id, strip[j].id};
-                best = sqrt(ans.best2);
-            }
+    if (!left.empty()) {
+        const double xL = left.back().x;
+        for (int i = (int)left.size() - 1; i >= 0; --i) {
+            if (fabs(left[i].x - xL) >= best) break;
+            strip.push_back(left[i]);
         }
     }
 
-    return ans;
+    if (!right.empty()) {
+        const double xR = right.front().x;
+        for (int i = 0; i < (int)right.size(); ++i) {
+            if (fabs(right[i].x - xR) >= best) break;
+            strip.push_back(right[i]);
+        }
+    }
+
+    best = min(best, BruteForceMin(strip));
 }
 
 int main() {
@@ -83,22 +71,21 @@ int main() {
 
     int n;
     cin >> n;
-    vector<Point3D> pts(n);
-    for (int i = 0; i < n; i++) {
-        cin >> pts[i].x >> pts[i].y >> pts[i].z;
-        pts[i].id = i;
+
+    vector<Point> p;
+    p.reserve(n);
+
+    for (int i = 0; i < n; ++i) {
+        Point t{};
+        cin >> t.x >> t.y >> t.z;
+        p.push_back(t);
     }
 
-    sort(pts.begin(), pts.end(), [](const Point3D& a, const Point3D& b) {
-        if (a.x != b.x) return a.x < b.x;
-        if (a.y != b.y) return a.y < b.y;
-        return a.z < b.z;
-    });
+    sort(p.begin(), p.end());
 
-    Answer ans = solveDC(pts, 0, n);
+    double ans = numeric_limits<double>::infinity();
+    Solve(p, ans);
 
-    cout << fixed << setprecision(10);
-    cout << "Min distance = " << sqrt(ans.best2) << "\n";
-    cout << "Pair ids = " << ans.pairId.first << " " << ans.pairId.second << "\n";
+    cout << ans;
     return 0;
 }
