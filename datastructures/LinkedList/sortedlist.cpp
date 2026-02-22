@@ -8,7 +8,7 @@ struct Node {
 struct List {
     Node* start;
     List() {
-        start = new Node();   // dummy node
+        start = new Node();   
         start->next = nullptr;
     }
 };
@@ -45,4 +45,5 @@ int main() {
     while (std::cin>>n)
         SortInsert(l, n);
     Print(l);
+
 }
